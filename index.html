@@ -10,6 +10,10 @@
     href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&display=swap"
     rel="stylesheet"
   />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap"
+    rel="stylesheet"
+  />
   <style>
     :root {
       --bg-dark: #0a0a0f;
@@ -120,6 +124,85 @@
         glowPulse 2.2s ease-in-out infinite 1.4s;
     }
 
+    #catScene {
+      display: none;
+      width: min(92vw, 760px);
+      padding: 1.2rem;
+      font-family: "Quicksand", sans-serif;
+      border-radius: 22px;
+      background: rgba(18, 10, 24, 0.75);
+      border: 1px solid rgba(255, 187, 215, 0.35);
+      box-shadow: 0 20px 44px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(8px);
+      color: #ffe8f4;
+    }
+
+    #catScene.show {
+      display: block;
+      animation: sceneEnter 0.6s ease-out both;
+    }
+
+    .cat-emoji {
+      font-size: clamp(5rem, 15vw, 8.5rem);
+      line-height: 1;
+      user-select: none;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      animation: kittyFloat 2.3s ease-in-out infinite;
+      display: inline-block;
+      margin-bottom: 0.55rem;
+    }
+
+    .cat-emoji:hover {
+      transform: scale(1.06);
+    }
+
+    #catHint {
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      color: #ffd3e8;
+      margin-bottom: 0.5rem;
+    }
+
+    #catMessage {
+      min-height: 4.5rem;
+      font-size: clamp(1.5rem, 3.4vw, 2.4rem);
+      line-height: 1.24;
+      margin-bottom: 0.9rem;
+      color: #fff6fb;
+    }
+
+    #catProgress {
+      font-size: clamp(1.2rem, 2.8vw, 1.75rem);
+      color: #ffc7df;
+      margin-bottom: 0.9rem;
+    }
+
+    #nextMessageButton {
+      border: none;
+      border-radius: 999px;
+      padding: 0.65rem 1.5rem;
+      font-size: clamp(1.3rem, 3vw, 1.9rem);
+      font-family: "Dancing Script", cursive;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff80b5, #d45d8a);
+      box-shadow: 0 0 20px rgba(255, 136, 187, 0.35);
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+
+    #nextMessageButton:hover {
+      transform: scale(1.04);
+      filter: brightness(1.06);
+    }
+
+    #nextMessageButton:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+
     @keyframes dramaticEntrance {
       0% {
         opacity: 0;
@@ -165,12 +248,43 @@
           0 0 62px rgba(255, 217, 133, 0.35);
       }
     }
+
+    @keyframes sceneEnter {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes kittyFloat {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-8px);
+      }
+    }
   </style>
 </head>
 <body>
   <canvas id="fireworksCanvas"></canvas>
+  <audio id="bgMusic" loop preload="auto">
+    <source src="./fireflies.mp3" type="audio/mpeg" />
+  </audio>
   <div class="overlay">
     <button id="startButton" type="button">💖 Clique aqui</button>
+    <section id="catScene" aria-live="polite">
+      <div id="catEmoji" class="cat-emoji" role="button" tabindex="0" aria-label="Fazer carinho no gatinho">🐱</div>
+      <p id="catHint">Faz carinho no gatinho 3 vezes para ele abrir o coracao...</p>
+      <p id="catMessage"></p>
+      <p id="catProgress">Carinhos: 0/3</p>
+      <button id="nextMessageButton" type="button" disabled>Continuar 💞</button>
+    </section>
     <h1 id="loveText">Eu te amo Mariah Labubonica 💖</h1>
   </div>
 
@@ -180,6 +294,13 @@
 
     const startButton = document.getElementById("startButton");
     const loveText = document.getElementById("loveText");
+    const bgMusic = document.getElementById("bgMusic");
+    const catScene = document.getElementById("catScene");
+    const catEmoji = document.getElementById("catEmoji");
+    const catHint = document.getElementById("catHint");
+    const catMessage = document.getElementById("catMessage");
+    const catProgress = document.getElementById("catProgress");
+    const nextMessageButton = document.getElementById("nextMessageButton");
 
     const FIREWORK_MAX = 6;
     const GRAVITY = 0.045;
@@ -199,6 +320,15 @@
     let animationId = null;
     let launchTimer = null;
     let running = false;
+    let catPetCount = 0;
+    let catMessageIndex = 0;
+
+    const CAT_MESSAGES = [
+      "Miau... eu amo muito voce! 💖",
+      "Voce e a minha vida inteira, o meu abraco e meu sorriso.",
+      "As vezes eu erro, mas e sempre tentando acertar por voce.",
+      "Porque voce e o amor da minha vida. Pra sempre."
+    ];
 
     function resizeCanvas() {
       const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -325,16 +455,60 @@
       animationId = window.requestAnimationFrame(animate);
     }
 
-    function startShow() {
+    function startFinalShow() {
       if (running) return;
       running = true;
 
-      startButton.style.display = "none";
+      catScene.classList.remove("show");
       loveText.classList.add("show");
+      bgMusic.volume = 0.35;
+      bgMusic.play().catch(() => {
+        console.warn("Nao foi possivel tocar a musica de fundo automaticamente.");
+      });
 
       fireworks = [];
       launchFirework();
       animate();
+    }
+
+    function updateCatProgress() {
+      catProgress.textContent = "Carinhos: " + catPetCount + "/3";
+      if (catPetCount >= 3) {
+        catHint.textContent = "Perfeito! Agora leia a mensagem do gatinho.";
+        nextMessageButton.disabled = false;
+      }
+    }
+
+    function petKitty() {
+      if (catPetCount >= 3) return;
+      catPetCount += 1;
+      catEmoji.textContent = catPetCount % 2 === 0 ? "😺" : "🐱";
+      updateCatProgress();
+    }
+
+    function showNextCatMessage() {
+      if (catPetCount < 3) return;
+      if (catMessageIndex >= CAT_MESSAGES.length) {
+        startFinalShow();
+        return;
+      }
+
+      catMessage.textContent = CAT_MESSAGES[catMessageIndex];
+      catMessageIndex += 1;
+
+      if (catMessageIndex < CAT_MESSAGES.length) {
+        nextMessageButton.textContent = "Continuar 💞";
+        return;
+      }
+
+      nextMessageButton.textContent = "Finalizar surpresa ✨";
+    }
+
+    function startCatInteraction() {
+      startButton.style.display = "none";
+      catScene.classList.add("show");
+      catMessage.textContent = "Miau... antes de tudo, me faz um carinho? 🐾";
+      updateCatProgress();
     }
 
     function handleVisibilityChange() {
@@ -345,7 +519,15 @@
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    startButton.addEventListener("click", startShow);
+    startButton.addEventListener("click", startCatInteraction);
+    catEmoji.addEventListener("click", petKitty);
+    catEmoji.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        petKitty();
+      }
+    });
+    nextMessageButton.addEventListener("click", showNextCatMessage);
 
     window.addEventListener("beforeunload", () => {
       if (animationId) window.cancelAnimationFrame(animationId);
