@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Surpresa Romantica</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --bg-dark: #0a0a0f;
+      --rose-gold-1: #d68ea0;
+      --rose-gold-2: #b76e79;
+      --rose-gold-3: #e7b2a8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Dancing Script", cursive;
+      background:
+        radial-gradient(circle at 20% 20%, #1a1020 0%, transparent 35%),
+        radial-gradient(circle at 80% 80%, #180b16 0%, transparent 35%),
+        var(--bg-dark);
+    }
+
+    #fireworksCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    #startButton {
+      border: none;
+      border-radius: 999px;
+      padding: 0.95rem 2.2rem;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700;
+      color: #ffffff;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      background: linear-gradient(135deg, var(--rose-gold-1), var(--rose-gold-2), var(--rose-gold-3));
+      box-shadow:
+        0 0 16px rgba(231, 178, 168, 0.35),
+        0 0 35px rgba(183, 110, 121, 0.25);
+      transition: transform 0.28s ease, box-shadow 0.28s ease, filter 0.28s ease;
+      user-select: none;
+    }
+
+    #startButton:hover {
+      transform: scale(1.06);
+      box-shadow:
+        0 0 24px rgba(231, 178, 168, 0.5),
+        0 0 48px rgba(214, 142, 160, 0.4);
+      filter: brightness(1.08);
+    }
+
+    #startButton:active {
+      transform: scale(0.98);
+    }
+
+    #loveText {
+      font-size: clamp(3rem, 8vw, 7rem);
+      font-weight: 700;
+      line-height: 1.1;
+      max-width: min(90vw, 1200px);
+      opacity: 0;
+      transform: scale(0.35) translateY(24px);
+      display: none;
+      background: linear-gradient(
+        90deg,
+        #ff6aa2 0%,
+        #ff244f 35%,
+        #ffd36f 70%,
+        #ff6aa2 100%
+      );
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow:
+        0 0 12px rgba(255, 124, 179, 0.45),
+        0 0 24px rgba(255, 43, 90, 0.34),
+        0 0 36px rgba(255, 217, 133, 0.2);
+      animation:
+        gradientShift 5s linear infinite,
+        glowPulse 2.2s ease-in-out infinite;
+    }
+
+    #loveText.show {
+      display: block;
+      animation:
+        dramaticEntrance 1.4s cubic-bezier(0.2, 1.4, 0.25, 1) forwards,
+        gradientShift 5s linear infinite 1.4s,
+        glowPulse 2.2s ease-in-out infinite 1.4s;
+    }
+
+    @keyframes dramaticEntrance {
+      0% {
+        opacity: 0;
+        transform: scale(0.2) translateY(36px);
+      }
+      45% {
+        opacity: 1;
+        transform: scale(1.15) translateY(-10px);
+      }
+      70% {
+        transform: scale(0.94) translateY(4px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes gradientShift {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    @keyframes glowPulse {
+      0%,
+      100% {
+        text-shadow:
+          0 0 12px rgba(255, 124, 179, 0.45),
+          0 0 24px rgba(255, 43, 90, 0.34),
+          0 0 36px rgba(255, 217, 133, 0.2);
+      }
+      50% {
+        text-shadow:
+          0 0 20px rgba(255, 124, 179, 0.65),
+          0 0 40px rgba(255, 43, 90, 0.5),
+          0 0 62px rgba(255, 217, 133, 0.35);
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="fireworksCanvas"></canvas>
+  <div class="overlay">
+    <button id="startButton" type="button">💖 Clique aqui</button>
+    <h1 id="loveText">Eu te amo Mariah Labubonica 💖</h1>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("fireworksCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const startButton = document.getElementById("startButton");
+    const loveText = document.getElementById("loveText");
+
+    const FIREWORK_MAX = 6;
+    const GRAVITY = 0.045;
+    const COLORS = [
+      "#ff5ea3",
+      "#ff2d55",
+      "#ffd166",
+      "#c77dff",
+      "#ffffff",
+      "#9ad7ff",
+      "#ff8fab"
+    ];
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    let fireworks = [];
+    let animationId = null;
+    let launchTimer = null;
+    let running = false;
+
+    function resizeCanvas() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    class Particle {
+      constructor(x, y, color, speed, angle) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.alpha = 1;
+        this.decay = 0.009 + Math.random() * 0.012;
+        this.size = 1.6 + Math.random() * 2.4;
+        this.friction = 0.985;
+      }
+
+      update() {
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.vy += GRAVITY;
+        this.x += this.vx;
+        this.y += this.vy;
+        this.alpha -= this.decay;
+      }
+
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = Math.max(this.alpha, 0);
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    class Firework {
+      constructor() {
+        this.x = Math.random() * width;
+        this.y = height + 10;
+        this.targetY = height * (0.15 + Math.random() * 0.45);
+        this.vx = (Math.random() - 0.5) * 1.4;
+        this.vy = -(6.5 + Math.random() * 2.4);
+        this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        this.exploded = false;
+        this.particles = [];
+      }
+
+      explode() {
+        this.exploded = true;
+        const count = 80 + Math.floor(Math.random() * 41);
+        for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count + Math.random() * 0.12;
+          const speed = 1.2 + Math.random() * 5.2;
+          const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+          this.particles.push(new Particle(this.x, this.y, color, speed, angle));
+        }
+      }
+
+      update() {
+        if (!this.exploded) {
+          this.x += this.vx;
+          this.y += this.vy;
+          this.vy += 0.028;
+
+          if (this.y <= this.targetY || this.vy >= -0.25) {
+            this.explode();
+          }
+          return true;
+        }
+
+        this.particles.forEach((particle) => particle.update());
+        this.particles = this.particles.filter((particle) => particle.alpha > 0);
+        return this.particles.length > 0;
+      }
+
+      draw() {
+        if (!this.exploded) {
+          ctx.save();
+          ctx.globalAlpha = 0.95;
+          ctx.fillStyle = this.color;
+          ctx.shadowColor = this.color;
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          return;
+        }
+
+        this.particles.forEach((particle) => particle.draw());
+      }
+    }
+
+    function launchFirework() {
+      if (!running) return;
+      if (fireworks.length < FIREWORK_MAX) {
+        fireworks.push(new Firework());
+      }
+      const nextDelay = 600 + Math.random() * 300;
+      launchTimer = window.setTimeout(launchFirework, nextDelay);
+    }
+
+    function animate() {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "rgba(10, 10, 15, 0.2)";
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.globalCompositeOperation = "lighter";
+      fireworks = fireworks.filter((firework) => firework.update());
+      fireworks.forEach((firework) => firework.draw());
+
+      animationId = window.requestAnimationFrame(animate);
+    }
+
+    function startShow() {
+      if (running) return;
+      running = true;
+
+      startButton.style.display = "none";
+      loveText.classList.add("show");
+
+      fireworks = [];
+      launchFirework();
+      animate();
+    }
+
+    function handleVisibilityChange() {
+      if (document.hidden) return;
+      resizeCanvas();
+    }
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    startButton.addEventListener("click", startShow);
+
+    window.addEventListener("beforeunload", () => {
+      if (animationId) window.cancelAnimationFrame(animationId);
+      if (launchTimer) window.clearTimeout(launchTimer);
+    });
+  </script>
+</body>
+</html>
