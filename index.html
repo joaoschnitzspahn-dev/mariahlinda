@@ -320,6 +320,7 @@
     let animationId = null;
     let launchTimer = null;
     let running = false;
+    let musicStarted = false;
     let catPetCount = 0;
     let catMessageIndex = 0;
 
@@ -461,10 +462,6 @@
 
       catScene.classList.remove("show");
       loveText.classList.add("show");
-      bgMusic.volume = 0.35;
-      bgMusic.play().catch(() => {
-        console.warn("Nao foi possivel tocar a musica de fundo automaticamente.");
-      });
 
       fireworks = [];
       launchFirework();
@@ -509,6 +506,14 @@
       catScene.classList.add("show");
       catMessage.textContent = "Miau... antes de tudo, me faz um carinho? 🐾";
       updateCatProgress();
+
+      if (!musicStarted) {
+        musicStarted = true;
+        bgMusic.volume = 0.35;
+        bgMusic.play().catch(() => {
+          console.warn("Nao foi possivel tocar a musica de fundo automaticamente.");
+        });
+      }
     }
 
     function handleVisibilityChange() {
